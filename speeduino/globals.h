@@ -7,12 +7,27 @@
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega2561__)
   #define BOARD_DIGITAL_GPIO_PINS 54
   #define BOARD_NR_GPIO_PINS 62
+#ifndef LED_BUILTIN
   #define LED_BUILTIN 13
+#endif
   #define CORE_AVR
   #define BOARD_H "board_avr2560.h"
   #define INJ_CHANNELS 8
   #define IGN_CHANNELS 4
   //#define DisablePWM //Uncomment if you want to disable Boost, VVT and Idle PWM to gain 3 more Timer Channels.
+
+  #if defined(__AVR_ATmega2561__)
+    //This is a workaround to avoid having to change all the references to higher ADC channels. We simply define the channels (Which don't exist on the 2561) as being the same as A0-A7
+    //These Analog inputs should never be used on any 2561 board defintion (Because they don't exist on the MCU), so it will not cause any isses
+    #define A8  A0
+    #define A9  A1
+    #define A10  A2
+    #define A11  A3
+    #define A12  A4
+    #define A13  A5
+    #define A14  A6
+    #define A15  A7
+  #endif
 
   //#define TIMER5_MICROS
 
@@ -90,6 +105,7 @@
 #define BIT_SET(a,b) ((a) |= (1U<<(b)))
 #define BIT_CLEAR(a,b) ((a) &= ~(1U<<(b)))
 #define BIT_CHECK(var,pos) !!((var) & (1U<<(pos)))
+#define BIT_TOGGLE(var,pos) ((var)^= 1UL << (pos))
 
 #define interruptSafe(c) (noInterrupts(); {c} interrupts();) //Wraps any code between nointerrupt and interrupt calls
 
@@ -149,7 +165,7 @@
 #define BIT_STATUS3_RESET_PREVENT 0 //Indicates whether reset prevention is enabled
 #define BIT_STATUS3_NITROUS       1
 #define BIT_STATUS3_FUEL2_ACTIVE  2
-#define BIT_STATUS3_UNUSED3       3
+#define BIT_STATUS3_VSS_REFRESH   3
 #define BIT_STATUS3_UNUSED4       4
 #define BIT_STATUS3_NSQUIRTS1     5
 #define BIT_STATUS3_NSQUIRTS2     6
@@ -238,6 +254,8 @@
 #define OPEN_LOOP_BOOST     0
 #define CLOSED_LOOP_BOOST   1
 
+#define SOFT_LIMIT_FIXED        0
+#define SOFT_LIMIT_RELATIVE     1
 
 #define VVT_MODE_ONOFF      0
 #define VVT_MODE_OPEN_LOOP  1
@@ -401,8 +419,11 @@ extern byte secondaryTriggerEdge;
 extern int CRANK_ANGLE_MAX;
 extern int CRANK_ANGLE_MAX_IGN;
 extern int CRANK_ANGLE_MAX_INJ; //The number of crank degrees that the system track over. 360 for wasted / timed batch and 720 for sequential
-extern volatile uint16_t runSecsX10;
-  
+extern volatile uint32_t runSecsX10; /**< Counter of seconds since cranking commenced (similar to runSecs) but in increments of 0.1 seconds */
+extern volatile byte HWTest_INJ; /**< Each bit in this variable represents one of the injector channels and it's HW test status */
+extern volatile byte HWTest_INJ_50pc; /**< Each bit in this variable represents one of the injector channels and it's 50% HW test status */
+extern volatile byte HWTest_IGN; /**< Each bit in this variable represents one of the ignition channels and it's HW test status */
+extern volatile byte HWTest_IGN_50pc; /**< Each bit in this variable represents one of the ignition channels and it's 50% HW test status */
 
 //This needs to be here because using the config page directly can prevent burning the setting
 extern byte resetControl;
@@ -480,7 +501,7 @@ struct statuses {
   unsigned int PW6; //In uS
   unsigned int PW7; //In uS
   unsigned int PW8; //In uS
-  volatile byte runSecs; /**< Counter of seconds since cranking commenced (overflows at 255 obviously) */
+  volatile byte runSecs; /**< Counter of seconds since cranking commenced (Maxes out at 255 to prevent overflow) */
   volatile byte secl; /**< Counter incrementing once per second. Will overflow after 255 and begin again. This is used by TunerStudio to maintain comms sync */
   volatile uint32_t loopsPerSecond; /**< A performance indicator showing the number of main loops that are being executed each second */ 
   bool launchingSoft; /**< Indicator showing whether soft launch control adjustments are active */
@@ -518,6 +539,7 @@ struct statuses {
   uint16_t injAngle;
   byte ASEValue;
   uint16_t vss; /**< Current speed reading. Natively stored in kph and converted to mph in TS if required */
+  byte gear; /**< Current gear (Calculated from vss) */
 };
 
 /**
@@ -533,7 +555,8 @@ struct config2 {
   byte aeColdTaperMin; //AE cold modifier, taper start temp (full modifier), was ASE in early versions
   byte aeMode : 2; /**< Acceleration Enrichment mode. 0 = TPS, 1 = MAP. Values 2 and 3 reserved for potential future use (ie blended TPS / MAP) */
   byte battVCorMode : 1;
-  byte unused1_3c : 5;
+  byte SoftLimitMode : 1;
+  byte unused1_3c : 4;
   byte wueValues[10]; //Warm up enrichment array (10 bytes)
   byte crankingPct; //Cranking enrichment
   byte pinMapping; // The board / ping mapping to be used
@@ -623,7 +646,8 @@ struct config2 {
   uint16_t EMAPMax;
 
   byte fanWhenOff : 1;      // Only run fan when engine is running
-  byte fanUnused : 7;
+  byte fanWhenCranking : 1;      //**< Setting whether the fan output will stay on when the engine is cranking */ 
+  byte fanUnused : 6;
   byte asePct[4];  //Afterstart enrichment (%)
   byte aseCount[4]; //Afterstart enrichment cycles. This is the number of ignition cycles that the afterstart enrichment % lasts for
   byte aseBins[4]; //Afterstart enrichment temp axis
@@ -648,19 +672,19 @@ struct config2 {
   byte dfcoMinCLT;
 
   //VSS Stuff
-  byte vssEnable : 1;
-  byte vssPullup : 1;
+  byte vssMode : 2;
+  byte vssPin : 6;
   
   uint16_t vssPulsesPerKm;
   byte vssSmoothing;
   uint16_t vssRatio1;
   uint16_t vssRatio2;
-  byte vssRatio3;
-  byte vssRatio4;
-  byte vssRatio5;
-  byte vssRatio6;
+  uint16_t vssRatio3;
+  uint16_t vssRatio4;
+  uint16_t vssRatio5;
+  uint16_t vssRatio6;
 
-  byte unused2_95[14];
+  byte unused2_95[10];
 
 #if defined(CORE_AVR)
   };
@@ -1025,21 +1049,24 @@ struct config10 {
   byte fuel2Algorithm : 3;
   byte fuel2Mode : 3;
   byte fuel2SwitchVariable : 2;
+
+  //Bytes 123-124
   uint16_t fuel2SwitchValue;
 
-  //Byte 123
+  //Byte 125
   byte fuel2InputPin : 6;
   byte fuel2InputPolarity : 1;
   byte fuel2InputPullup : 1;
 
-  byte vvtCLholdDuty;
-  byte vvtCLKP;
-  byte vvtCLKI;
-  byte vvtCLKD;
-  uint16_t vvtCLMinAng;
-  uint16_t vvtCLMaxAng;
+  byte vvtCLholdDuty; //Byte 126
+  byte vvtCLKP; //Byte 127
+  byte vvtCLKI; //Byte 128
+  byte vvtCLKD; //Byte 129
+  uint16_t vvtCLMinAng; //Bytes 130-131
+  uint16_t vvtCLMaxAng; //Bytes 132-133
 
-  byte unused11_123_191[58];
+  byte crankingEnrichTaper; //Byte 134
+  byte unused11_135_191[57]; //Bytes 135-191
 
 #if defined(CORE_AVR)
   };
@@ -1108,6 +1135,7 @@ extern byte pinStepperEnable; //Turning the DRV8825 driver on/off
 extern byte pinLaunch;
 extern byte pinIgnBypass; //The pin used for an ignition bypass (Optional)
 extern byte pinFlex; //Pin with the flex sensor attached
+extern byte pinVSS; 
 extern byte pinBaro; //Pin that an external barometric pressure sensor is attached to (If used)
 extern byte pinResetControl; // Output pin used control resetting the Arduino
 #ifdef USE_MC33810
