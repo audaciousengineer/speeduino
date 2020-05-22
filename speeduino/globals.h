@@ -10,8 +10,9 @@
   #define LED_BUILTIN 13
   #define CORE_AVR
   #define BOARD_H "board_avr2560.h"
-  #define INJ_CHANNELS 4
-  #define IGN_CHANNELS 5
+  #define INJ_CHANNELS 8
+  #define IGN_CHANNELS 4
+  //#define DisablePWM //Uncomment if you want to disable Boost, VVT and Idle PWM to gain 3 more Timer Channels.
 
   //#define TIMER5_MICROS
 

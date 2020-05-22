@@ -710,10 +710,10 @@ void loop()
       //     interrupts();
       //   }
       // }
-
-#if INJ_CHANNELS >= 1
       if (fuelOn && !BIT_CHECK(currentStatus.status1, BIT_STATUS1_BOOSTCUT))
       {
+#if INJ_CHANNELS >= 1
+
         if(currentStatus.PW1 >= inj_opentime_uS)
         {
           if ( (injector1StartAngle <= crankAngle) && (fuelSchedule1.Status == RUNNING) ) { injector1StartAngle += CRANK_ANGLE_MAX_INJ; }
@@ -725,6 +725,7 @@ void loop()
                       );
           }
         }
+	  
 #endif
 
         /*-----------------------------------------------------------------------------------------
@@ -926,11 +927,11 @@ void loop()
         //Refresh the current crank angle info
         //ignition1StartAngle = 335;
         crankAngle = getCrankAngle(); //Refresh with the latest crank angle
-        while (crankAngle > CRANK_ANGLE_MAX_IGN ) { crankAngle -= CRANK_ANGLE_MAX_IGN; }
+        while (crankAngle >= CRANK_ANGLE_MAX_IGN ) { crankAngle -= CRANK_ANGLE_MAX_IGN; }
 
 #if IGN_CHANNELS >= 1
-        if ( (ignition1StartAngle <= crankAngle) && (ignitionSchedule1.Status == RUNNING) ) { ignition1StartAngle += CRANK_ANGLE_MAX_IGN; }
-        if ( (ignition1StartAngle > crankAngle) && (curRollingCut != 1) )
+        if ( (ignition1StartAngle <= crankAngle) && ( (ignitionSchedule1.Status == RUNNING)/* || (ignitionSchedule1.Status == OFF)*/ ) ) { ignition1StartAngle += CRANK_ANGLE_MAX_IGN; }//Falls der Startzeitpunkt schon vorbei ist und die Schedule bereits läuft, setze einfach den nächsten Zeitpunkt
+        if ( (ignition1StartAngle > crankAngle) && (curRollingCut != 1) )//sind wir noch vor der Startzeit? - für kleine StartAngle kaum erfüllbar, nie für 0!!
         {
           setIgnitionSchedule1(ign1StartFunction,
                     //((unsigned long)(ignition1StartAngle - crankAngle) * (unsigned long)timePerDegree),

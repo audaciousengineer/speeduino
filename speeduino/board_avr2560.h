@@ -44,10 +44,18 @@
   #define FUEL3_COUNTER TCNT3
   #define FUEL4_COUNTER TCNT4
   #define FUEL5_COUNTER TCNT4
-  #define FUEL6_COUNTER TCNT4 //Replaces ignition 4
-  #define FUEL7_COUNTER TCNT5 //Replaces ignition 3
-  #define FUEL8_COUNTER TCNT5 //Replaces ignition 2
+  
+  #ifndef DisablePWM
+	  #define FUEL6_COUNTER TCNT4 //Replaces ignition 4
+	  #define FUEL7_COUNTER TCNT5 //Replaces ignition 3
+	  #define FUEL8_COUNTER TCNT5 //Replaces ignition 2
 
+  #else
+	  #define FUEL6_COUNTER TCNT1 //Replaces Boost
+	  #define FUEL7_COUNTER TCNT1 //Replaces VVT
+	  #define FUEL8_COUNTER TCNT1 //Replaces Idle
+  #endif
+  
   #define IGN1_COUNTER  TCNT5
   #define IGN2_COUNTER  TCNT5
   #define IGN3_COUNTER  TCNT5
@@ -62,10 +70,17 @@
   #define FUEL3_COMPARE OCR3C
   #define FUEL4_COMPARE OCR4B //Replaces ignition 6
   #define FUEL5_COMPARE OCR4C //Replaces ignition 5
-  #define FUEL6_COMPARE OCR4A //Replaces ignition 4
-  #define FUEL7_COMPARE OCR5C //Replaces ignition 3
-  #define FUEL8_COMPARE OCR5B //Replaces ignition 2
-
+  
+  #ifndef DisablePWM
+	  #define FUEL6_COMPARE OCR4A //Replaces ignition 4
+	  #define FUEL7_COMPARE OCR5C //Replaces ignition 3
+	  #define FUEL8_COMPARE OCR5B //Replaces ignition 2
+  #else
+	  #define FUEL6_COMPARE OCR1A //Replaces Boost
+	  #define FUEL7_COMPARE OCR1B //Replaces VVT
+	  #define FUEL8_COMPARE OCR1C //Replaces Idle
+  #endif	
+  
   #define IGN1_COMPARE  OCR5A
   #define IGN2_COMPARE  OCR5B
   #define IGN3_COMPARE  OCR5C
@@ -81,19 +96,33 @@
   #define FUEL3_TIMER_ENABLE() TIFR3 |= (1<<OCF3C); TIMSK3 |= (1 << OCIE3C) //Turn on the C compare unit (ie turn on the interrupt)
   #define FUEL4_TIMER_ENABLE() TIFR4 |= (1<<OCF4B); TIMSK4 |= (1 << OCIE4B) //Turn on the B compare unit (ie turn on the interrupt)
   #define FUEL5_TIMER_ENABLE() TIFR4 |= (1<<OCF4C); TIMSK4 |= (1 << OCIE4C) //Turn on the C compare unit (ie turn on the interrupt)
-  #define FUEL6_TIMER_ENABLE() TIFR4 |= (1<<OCF4A); TIMSK4 |= (1 << OCIE4A) //Turn on the A compare unit (ie turn on the interrupt)
-  #define FUEL7_TIMER_ENABLE() TIFR5 |= (1<<OCF5C); TIMSK5 |= (1 << OCIE5C) //
-  #define FUEL8_TIMER_ENABLE() TIFR5 |= (1<<OCF5B); TIMSK5 |= (1 << OCIE5B) //
+  
+  #ifndef DisablePWM
+	  #define FUEL6_TIMER_ENABLE() TIFR4 |= (1<<OCF4A); TIMSK4 |= (1 << OCIE4A) //Turn on the A compare unit (ie turn on the interrupt)
+	  #define FUEL7_TIMER_ENABLE() TIFR5 |= (1<<OCF5C); TIMSK5 |= (1 << OCIE5C) //
+	  #define FUEL8_TIMER_ENABLE() TIFR5 |= (1<<OCF5B); TIMSK5 |= (1 << OCIE5B) //
+  #else
+	  #define FUEL6_TIMER_ENABLE() TIFR1 |= (1<<OCF1A); TIMSK1 |= (1 << OCIE1A) //Turn on the A compare unit (ie turn on the interrupt)
+	  #define FUEL7_TIMER_ENABLE() TIFR1 |= (1<<OCF1B); TIMSK1 |= (1 << OCIE1B) //
+	  #define FUEL8_TIMER_ENABLE() TIFR1 |= (1<<OCF1C); TIMSK1 |= (1 << OCIE1C) //
+  #endif
 
   #define FUEL1_TIMER_DISABLE() TIMSK3 &= ~(1 << OCIE3A); //Turn off this output compare unit
   #define FUEL2_TIMER_DISABLE() TIMSK3 &= ~(1 << OCIE3B); //Turn off this output compare unit
   #define FUEL3_TIMER_DISABLE() TIMSK3 &= ~(1 << OCIE3C); //Turn off this output compare unit
   #define FUEL4_TIMER_DISABLE() TIMSK4 &= ~(1 << OCIE4B); //Turn off this output compare unit
   #define FUEL5_TIMER_DISABLE() TIMSK4 &= ~(1 << OCIE4C); //
-  #define FUEL6_TIMER_DISABLE() TIMSK4 &= ~(1 << OCIE4A); //
-  #define FUEL7_TIMER_DISABLE() TIMSK5 &= ~(1 << OCIE5C); //
-  #define FUEL8_TIMER_DISABLE() TIMSK5 &= ~(1 << OCIE5B); //
-
+  
+  #ifndef DisablePWM
+	  #define FUEL6_TIMER_DISABLE() TIMSK4 &= ~(1 << OCIE4A); //
+	  #define FUEL7_TIMER_DISABLE() TIMSK5 &= ~(1 << OCIE5C); //
+	  #define FUEL8_TIMER_DISABLE() TIMSK5 &= ~(1 << OCIE5B); //
+  #else
+	  #define FUEL6_TIMER_DISABLE() TIMSK1 &= ~(1 << OCIE1A); //
+	  #define FUEL7_TIMER_DISABLE() TIMSK1 &= ~(1 << OCIE1B); //
+	  #define FUEL8_TIMER_DISABLE() TIMSK1 &= ~(1 << OCIE1C); //
+  #endif
+  
   //These have the TIFR5 bits set to 1 to clear the interrupt flag. This prevents a false interrupt being called the first time the channel is enabled.
   #define IGN1_TIMER_ENABLE() TIFR5 |= (1<<OCF5A); TIMSK5 |= (1 << OCIE5A) //Turn on the A compare unit (ie turn on the interrupt)
   #define IGN2_TIMER_ENABLE() TIFR5 |= (1<<OCF5B); TIMSK5 |= (1 << OCIE5B) //Turn on the B compare unit (ie turn on the interrupt)
@@ -120,6 +149,7 @@
 ***********************************************************************************************************
 * Auxilliaries
 */
+#ifndef DisablePWM
   #define ENABLE_BOOST_TIMER()  TIMSK1 |= (1 << OCIE1A)
   #define DISABLE_BOOST_TIMER() TIMSK1 &= ~(1 << OCIE1A)
   #define ENABLE_VVT_TIMER()    TIMSK1 |= (1 << OCIE1B)
@@ -129,17 +159,41 @@
   #define BOOST_TIMER_COUNTER   TCNT1
   #define VVT_TIMER_COMPARE     OCR1B
   #define VVT_TIMER_COUNTER     TCNT1
+#else
+  #define ENABLE_BOOST_TIMER()  
+  #define DISABLE_BOOST_TIMER() 
+  #define ENABLE_VVT_TIMER()    
+  #define DISABLE_VVT_TIMER()   
+/*
+uint16_t empty_boost;
+uint16_t empty_vvt;
 
+  #define BOOST_TIMER_COMPARE   empty_boost
+  #define BOOST_TIMER_COUNTER   0
+  #define VVT_TIMER_COMPARE     empty_vvt
+  #define VVT_TIMER_COUNTER     0
+  */
+#endif
 /*
 ***********************************************************************************************************
 * Idle
 */
+#ifndef DisablePWM
   #define IDLE_COUNTER TCNT1
   #define IDLE_COMPARE OCR1C
 
   #define IDLE_TIMER_ENABLE() TIMSK1 |= (1 << OCIE1C)
   #define IDLE_TIMER_DISABLE() TIMSK1 &= ~(1 << OCIE1C)
+#else
+  #define IDLE_TIMER_ENABLE() 
+  #define IDLE_TIMER_DISABLE()
+/*
+uint16_t empty_idle;
+  #define IDLE_COUNTER 0
+  #define IDLE_COMPARE empty_idle
 
+ */
+#endif
 /*
 ***********************************************************************************************************
 * CAN / Second serial

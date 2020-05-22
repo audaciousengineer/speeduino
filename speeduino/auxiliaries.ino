@@ -354,7 +354,9 @@ void boostDisable()
 }
 
 //The interrupt to control the Boost PWM
+#ifndef DisablePWM
 #if defined(CORE_AVR)
+
   ISR(TIMER1_COMPA_vect)
 #else
   static inline void boostInterrupt() //Most ARM chips can simply call a function
@@ -374,10 +376,12 @@ void boostDisable()
     boost_pwm_state = true;
   }
 }
+#endif
 
 //The interrupt to control the VVT PWM
-#if defined(CORE_AVR)
-  ISR(TIMER1_COMPB_vect)
+#ifndef DisablePWM
+#if defined(CORE_AVR) 
+ISR(TIMER1_COMPB_vect)
 #else
   static inline void vvtInterrupt() //Most ARM chips can simply call a function
 #endif
@@ -396,7 +400,8 @@ void boostDisable()
     vvt_pwm_state = true;
   }
 }
-
+  #endif
+  
 #if defined(CORE_TEENSY35)
 void ftm1_isr(void)
 {

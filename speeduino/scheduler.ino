@@ -923,7 +923,11 @@ static inline void fuelSchedule5Interrupt() //Most ARM chips can simply call a f
 
 #if (INJ_CHANNELS >= 6)
 #if defined(CORE_AVR) //AVR chips use the ISR for this
-ISR(TIMER4_COMPA_vect) //fuelSchedule6
+	#ifndef DisablePWM
+		ISR(TIMER4_COMPA_vect) //fuelSchedule6
+	#else
+		ISR(TIMER1_COMPA_vect)
+	#endif
 #else
 static inline void fuelSchedule6Interrupt() //Most ARM chips can simply call a function
 #endif
@@ -958,7 +962,11 @@ static inline void fuelSchedule6Interrupt() //Most ARM chips can simply call a f
 
 #if (INJ_CHANNELS >= 7)
 #if defined(CORE_AVR) //AVR chips use the ISR for this
-ISR(TIMER5_COMPC_vect) //fuelSchedule7
+	#ifndef DisablePWM
+		ISR(TIMER5_COMPC_vect) //fuelSchedule7
+	#else
+		ISR(TIMER1_COMPB_vect) //fuelSchedule7
+	#endif
 #else
 static inline void fuelSchedule7Interrupt() //Most ARM chips can simply call a function
 #endif
@@ -993,7 +1001,11 @@ static inline void fuelSchedule7Interrupt() //Most ARM chips can simply call a f
 
 #if (INJ_CHANNELS >= 8)
 #if defined(CORE_AVR) //AVR chips use the ISR for this
-ISR(TIMER5_COMPB_vect) //fuelSchedule8
+	#ifndef DisablePWM
+		ISR(TIMER5_COMPB_vect) //fuelSchedule8
+	#else
+		ISR(TIMER1_COMPC_vect) //fuelSchedule8
+	#endif
 #else
 static inline void fuelSchedule8Interrupt() //Most ARM chips can simply call a function
 #endif

@@ -512,8 +512,9 @@ static inline void enableIdle()
   }
 }
 
+#ifndef DisablePWM
 #if defined(CORE_AVR) //AVR chips use the ISR for this
-ISR(TIMER1_COMPC_vect)
+  ISR(TIMER1_COMPC_vect)
 #else
 static inline void idleInterrupt() //Most ARM chips can simply call a function
 #endif
@@ -554,6 +555,7 @@ static inline void idleInterrupt() //Most ARM chips can simply call a function
     idle_pwm_state = true;
   }
 }
+#endif
 
 #if defined(CORE_TEENSY35)
 void ftm2_isr(void)
