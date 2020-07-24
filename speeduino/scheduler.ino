@@ -110,6 +110,9 @@ void initialiseSchedulers()
     ignitionSchedule8.schedulesSet = 0;
 }
 
+int MarkerA = 0;
+int MarkerB = 0;
+
 /*
 These 8 function turn a schedule on, provides the time to start and the duration and gives it callback functions.
 All 8 functions operate the same, just on different schedules
@@ -155,6 +158,45 @@ void setFuelSchedule(struct Schedule *targetSchedule, unsigned long timeout, uns
   }
 }
 
+void startFuel()
+{
+  switch (MarkerA)
+  {
+    case 0:
+      FUEL1_COMPARE = (uint16_t)fuelSchedule1.startCompare;
+      break;
+    case 1:
+      FUEL1_COMPARE = (uint16_t)fuelSchedule2.startCompare;
+      break;
+    case 2:
+      FUEL1_COMPARE = (uint16_t)fuelSchedule3.startCompare;
+      break;
+    case 3:
+      FUEL1_COMPARE = (uint16_t)fuelSchedule4.startCompare;
+      break;
+
+  }
+}
+
+void stopFuel()
+{
+  switch (MarkerB)
+  {
+    case 0:
+      FUEL2_COMPARE = (uint16_t)(FUEL2_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule1.duration));
+      break;
+    case 1:
+      FUEL2_COMPARE = (uint16_t)(FUEL2_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule2.duration));
+      break;
+    case 2:
+      FUEL2_COMPARE = (uint16_t)(FUEL2_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule3.duration));
+      break;
+    case 3:
+      FUEL2_COMPARE = (uint16_t)(FUEL2_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule4.duration));
+      break;
+
+  }
+}
 
 //void setFuelSchedule1(void (*startCallback)(), unsigned long timeout, unsigned long duration, void(*endCallback)())
 void setFuelSchedule1(unsigned long timeout, unsigned long duration) //Uses timer 3 compare A
@@ -171,14 +213,15 @@ void setFuelSchedule1(unsigned long timeout, unsigned long duration) //Uses time
         //The following must be enclosed in the noInterupts block to avoid contention caused if the relevant interrupt fires before the state is fully set
         noInterrupts();
         fuelSchedule1.startCompare = FUEL1_COUNTER + uS_TO_TIMER_COMPARE(timeout);
-        fuelSchedule1.endCompare = fuelSchedule1.startCompare + uS_TO_TIMER_COMPARE(duration);
+        //fuelSchedule1.endCompare = fuelSchedule1.startCompare + uS_TO_TIMER_COMPARE(duration);
         fuelSchedule1.Status = PENDING; //Turn this schedule on
         fuelSchedule1.schedulesSet++; //Increment the number of times this schedule has been set
         //Schedule 1 shares a timer with schedule 5
         //if(channel5InjEnabled) { FUEL1_COMPARE = (uint16_t)setQueue(timer3Aqueue, &fuelSchedule1, &fuelSchedule5, FUEL1_COUNTER); }
         //else { timer3Aqueue[0] = &fuelSchedule1; timer3Aqueue[1] = &fuelSchedule1; timer3Aqueue[2] = &fuelSchedule1; timer3Aqueue[3] = &fuelSchedule1; FUEL1_COMPARE = (uint16_t)fuelSchedule1.startCompare; }
         //timer3Aqueue[0] = &fuelSchedule1; timer3Aqueue[1] = &fuelSchedule1; timer3Aqueue[2] = &fuelSchedule1; timer3Aqueue[3] = &fuelSchedule1;
-        FUEL1_COMPARE = (uint16_t)fuelSchedule1.startCompare;
+        startFuel();
+        //FUEL1_COMPARE = (uint16_t)fuelSchedule1.startCompare;
         interrupts();
         FUEL1_TIMER_ENABLE();
       }
@@ -220,12 +263,13 @@ void setFuelSchedule2(unsigned long timeout, unsigned long duration) //Uses time
       //The following must be enclosed in the noInterupts block to avoid contention caused if the relevant interrupt fires before the state is fully set
       noInterrupts();
       fuelSchedule2.startCompare = FUEL2_COUNTER + timeout_timer_compare;
-      fuelSchedule2.endCompare = fuelSchedule2.startCompare + uS_TO_TIMER_COMPARE(duration);
-      FUEL2_COMPARE = (uint16_t)fuelSchedule2.startCompare; //Use the B compare unit of timer 3
+      //fuelSchedule2.endCompare = fuelSchedule2.startCompare + uS_TO_TIMER_COMPARE(duration);
+      //FUEL2_COMPARE = (uint16_t)fuelSchedule2.startCompare; //Use the B compare unit of timer 3
+      startFuel();
       fuelSchedule2.Status = PENDING; //Turn this schedule on
       fuelSchedule2.schedulesSet++; //Increment the number of times this schedule has been set
       interrupts();
-      FUEL2_TIMER_ENABLE();
+      FUEL1_TIMER_ENABLE();
     }
     else
     {
@@ -259,11 +303,12 @@ void setFuelSchedule3(unsigned long timeout, unsigned long duration) //Uses time
       noInterrupts();
       fuelSchedule3.startCompare = FUEL3_COUNTER + timeout_timer_compare;
       fuelSchedule3.endCompare = fuelSchedule3.startCompare + uS_TO_TIMER_COMPARE(duration);
-      FUEL3_COMPARE = (uint16_t)fuelSchedule3.startCompare; //Use the C compare unit of timer 3
+      //FUEL3_COMPARE = (uint16_t)fuelSchedule3.startCompare; //Use the C compare unit of timer 3
+      startFuel();
       fuelSchedule3.Status = PENDING; //Turn this schedule on
       fuelSchedule3.schedulesSet++; //Increment the number of times this schedule has been set
       interrupts();
-      FUEL3_TIMER_ENABLE();
+      FUEL1_TIMER_ENABLE();
     }
     else
     {
@@ -297,11 +342,12 @@ void setFuelSchedule4(unsigned long timeout, unsigned long duration) //Uses time
       noInterrupts();
       fuelSchedule4.startCompare = FUEL4_COUNTER + timeout_timer_compare;
       fuelSchedule4.endCompare = fuelSchedule4.startCompare + uS_TO_TIMER_COMPARE(duration);
-      FUEL4_COMPARE = (uint16_t)fuelSchedule4.startCompare; //Use the B compare unit of timer 4
+      //FUEL4_COMPARE = (uint16_t)fuelSchedule4.startCompare; //Use the B compare unit of timer 4
+      startFuel();
       fuelSchedule4.Status = PENDING; //Turn this schedule on
       fuelSchedule4.schedulesSet++; //Increment the number of times this schedule has been set
       interrupts();
-      FUEL4_TIMER_ENABLE();
+      FUEL1_TIMER_ENABLE();
     }
     else
     {
@@ -801,35 +847,79 @@ ISR(TIMER3_COMPA_vect) //fuelSchedules 1 and 5
 #else
 static inline void fuelSchedule1Interrupt() //Most ARM chips can simply call a function
 #endif
+{
+  switch (MarkerA)
   {
-    if (fuelSchedule1.Status == PENDING) //Check to see if this schedule is turn on
-    {
-      //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
-      inj1StartFunction();
-      fuelSchedule1.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-      FUEL1_COMPARE = (uint16_t)(FUEL1_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule1.duration)); //Doing this here prevents a potential overflow on restarts
-    }
+    case 0:
+      if (fuelSchedule1.Status == PENDING) //Check to see if this schedule is turn on
+      {
+        //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
+        inj1StartFunction();
+        fuelSchedule1.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+        stopFuel();
+        MarkerA++;
+        startFuel();
+      }
+      break;
+    case 1:
+      if (fuelSchedule2.Status == PENDING) //Check to see if this schedule is turn on
+      {
+        //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
+        inj2StartFunction();
+        fuelSchedule2.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+        stopFuel();
+        MarkerA++;
+        startFuel();
+      }
+      break;
+    case 2:
+      if (fuelSchedule3.Status == PENDING) //Check to see if this schedule is turn on
+      {
+        //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
+        inj3StartFunction();
+        fuelSchedule3.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+        stopFuel();
+        MarkerA++;
+        startFuel();
+      }
+      break;
+    case 3:
+      if (fuelSchedule4.Status == PENDING) //Check to see if this schedule is turn on
+      {
+        //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
+        inj4StartFunction();
+        fuelSchedule4.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+        stopFuel();
+        MarkerA = 0;
+        startFuel();
+      }
+      break;
+  }
+
+
+  /*
     else if (fuelSchedule1.Status == RUNNING)
     {
-       //timer3Aqueue[0]->EndCallback();
-       inj1EndFunction();
-       fuelSchedule1.Status = OFF; //Turn off the schedule
-       fuelSchedule1.schedulesSet = 0;
-       //FUEL1_COMPARE = (uint16_t)fuelSchedule1.endCompare;
+     //timer3Aqueue[0]->EndCallback();
+     inj1EndFunction();
+     fuelSchedule1.Status = OFF; //Turn off the schedule
+     fuelSchedule1.schedulesSet = 0;
+     //FUEL1_COMPARE = (uint16_t)fuelSchedule1.endCompare;
 
-       //If there is a next schedule queued up, activate it
-       if(fuelSchedule1.hasNextSchedule == true)
-       {
-         FUEL1_COMPARE = (uint16_t)fuelSchedule1.nextStartCompare;
-         fuelSchedule1.endCompare = fuelSchedule1.nextEndCompare;
-         fuelSchedule1.Status = PENDING;
-         fuelSchedule1.schedulesSet = 1;
-         fuelSchedule1.hasNextSchedule = false;
-       }
-       else { FUEL1_TIMER_DISABLE(); }
+     //If there is a next schedule queued up, activate it
+     if(fuelSchedule1.hasNextSchedule == true)
+     {
+       FUEL1_COMPARE = (uint16_t)fuelSchedule1.nextStartCompare;
+       fuelSchedule1.endCompare = fuelSchedule1.nextEndCompare;
+       fuelSchedule1.Status = PENDING;
+       fuelSchedule1.schedulesSet = 1;
+       fuelSchedule1.hasNextSchedule = false;
+     }
+     else { FUEL1_TIMER_DISABLE(); }
     }
     else if (fuelSchedule1.Status == OFF) { FUEL1_TIMER_DISABLE(); } //Safety check. Turn off this output compare unit and return without performing any action
-  }
+  */
+}
 #endif
 
 #if (INJ_CHANNELS >= 2)
@@ -838,33 +928,55 @@ ISR(TIMER3_COMPB_vect) //fuelSchedule2
 #else
 static inline void fuelSchedule2Interrupt() //Most ARM chips can simply call a function
 #endif
+{
+  switch (MarkerB)
   {
-    if (fuelSchedule2.Status == PENDING) //Check to see if this schedule is turn on
-    {
-      //fuelSchedule2.StartCallback();
-      inj2StartFunction();
-      fuelSchedule2.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-      FUEL2_COMPARE = (uint16_t)(FUEL2_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule2.duration)); //Doing this here prevents a potential overflow on restarts
-    }
-    else if (fuelSchedule2.Status == RUNNING)
-    {
-       //fuelSchedule2.EndCallback();
-       inj2EndFunction();
-       fuelSchedule2.Status = OFF; //Turn off the schedule
-       fuelSchedule2.schedulesSet = 0;
-
-       //If there is a next schedule queued up, activate it
-       if(fuelSchedule2.hasNextSchedule == true)
-       {
-         FUEL2_COMPARE = (uint16_t)fuelSchedule2.nextStartCompare;
-         fuelSchedule2.endCompare = fuelSchedule2.nextEndCompare;
-         fuelSchedule2.Status = PENDING;
-         fuelSchedule2.schedulesSet = 1;
-         fuelSchedule2.hasNextSchedule = false;
-       }
-       else { FUEL2_TIMER_DISABLE(); }
-    }
+    case 0:
+      if (fuelSchedule1.Status == RUNNING) //Check to see if this schedule is turn on
+      {
+        //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
+        inj1EndFunction();
+        fuelSchedule1.Status = OFF; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+        fuelSchedule1.schedulesSet = 0;
+        MarkerB++;
+        stopFuel();
+      }
+      break;
+    case 1:
+      if (fuelSchedule2.Status == RUNNING) //Check to see if this schedule is turn on
+      {
+        //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
+        inj2EndFunction();
+        fuelSchedule2.Status = OFF; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+        fuelSchedule2.schedulesSet = 0;
+        MarkerB++;
+        stopFuel();
+      }
+      break;
+    case 2:
+      if (fuelSchedule3.Status == RUNNING) //Check to see if this schedule is turn on
+      {
+        //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
+        inj3EndFunction();
+        fuelSchedule3.Status = OFF; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+        fuelSchedule3.schedulesSet = 0;
+        MarkerB++;
+        stopFuel();
+      }
+      break;
+    case 3:
+      if (fuelSchedule4.Status == RUNNING) //Check to see if this schedule is turn on
+      {
+        //To use timer queue, change fuelShedule1 to timer3Aqueue[0];
+        inj4EndFunction();
+        fuelSchedule4.Status = OFF; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+        fuelSchedule4.schedulesSet = 0;
+        MarkerB = 0;
+        stopFuel();
+      }
+      break;
   }
+}
 #endif
 
 #if (INJ_CHANNELS >= 3)
@@ -873,33 +985,35 @@ ISR(TIMER3_COMPC_vect) //fuelSchedule3
 #else
 static inline void fuelSchedule3Interrupt() //Most ARM chips can simply call a function
 #endif
+{/*
+  if (fuelSchedule3.Status == PENDING) //Check to see if this schedule is turn on
   {
-    if (fuelSchedule3.Status == PENDING) //Check to see if this schedule is turn on
-    {
-      //fuelSchedule3.StartCallback();
-      inj3StartFunction();
-      fuelSchedule3.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-      FUEL3_COMPARE = (uint16_t)(FUEL3_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule3.duration)); //Doing this here prevents a potential overflow on restarts
-    }
-    else if (fuelSchedule3.Status == RUNNING)
-    {
-       //fuelSchedule3.EndCallback();
-       inj3EndFunction();
-       fuelSchedule3.Status = OFF; //Turn off the schedule
-       fuelSchedule3.schedulesSet = 0;
-
-       //If there is a next schedule queued up, activate it
-       if(fuelSchedule3.hasNextSchedule == true)
-       {
-         FUEL3_COMPARE = (uint16_t)fuelSchedule3.nextStartCompare;
-         fuelSchedule3.endCompare = fuelSchedule3.nextEndCompare;
-         fuelSchedule3.Status = PENDING;
-         fuelSchedule3.schedulesSet = 1;
-         fuelSchedule3.hasNextSchedule = false;
-       }
-       else { FUEL3_TIMER_DISABLE(); }
-    }
+    //fuelSchedule3.StartCallback();
+    inj3StartFunction();
+    fuelSchedule3.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+    FUEL3_COMPARE = (uint16_t)(FUEL3_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule3.duration)); //Doing this here prevents a potential overflow on restarts
   }
+  else if (fuelSchedule3.Status == RUNNING)
+  {
+    //fuelSchedule3.EndCallback();
+    inj3EndFunction();
+    fuelSchedule3.Status = OFF; //Turn off the schedule
+    fuelSchedule3.schedulesSet = 0;
+
+    //If there is a next schedule queued up, activate it
+    if (fuelSchedule3.hasNextSchedule == true)
+    {
+      FUEL3_COMPARE = (uint16_t)fuelSchedule3.nextStartCompare;
+      fuelSchedule3.endCompare = fuelSchedule3.nextEndCompare;
+      fuelSchedule3.Status = PENDING;
+      fuelSchedule3.schedulesSet = 1;
+      fuelSchedule3.hasNextSchedule = false;
+    }
+    else {
+      FUEL3_TIMER_DISABLE();
+    }
+  }*/
+}
 #endif
 
 #if (INJ_CHANNELS >= 4)
@@ -908,33 +1022,35 @@ ISR(TIMER4_COMPB_vect) //fuelSchedule4
 #else
 static inline void fuelSchedule4Interrupt() //Most ARM chips can simply call a function
 #endif
+{/*
+  if (fuelSchedule4.Status == PENDING) //Check to see if this schedule is turn on
   {
-    if (fuelSchedule4.Status == PENDING) //Check to see if this schedule is turn on
-    {
-      //fuelSchedule4.StartCallback();
-      inj4StartFunction();
-      fuelSchedule4.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
-      FUEL4_COMPARE = (uint16_t)(FUEL4_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule4.duration)); //Doing this here prevents a potential overflow on restarts
-    }
-    else if (fuelSchedule4.Status == RUNNING)
-    {
-       //fuelSchedule4.EndCallback();
-       inj4EndFunction();
-       fuelSchedule4.Status = OFF; //Turn off the schedule
-       fuelSchedule4.schedulesSet = 0;
-
-       //If there is a next schedule queued up, activate it
-       if(fuelSchedule4.hasNextSchedule == true)
-       {
-         FUEL4_COMPARE = (uint16_t)fuelSchedule4.nextStartCompare;
-         fuelSchedule4.endCompare = fuelSchedule4.nextEndCompare;
-         fuelSchedule4.Status = PENDING;
-         fuelSchedule4.schedulesSet = 1;
-         fuelSchedule4.hasNextSchedule = false;
-       }
-       else { FUEL4_TIMER_DISABLE(); }
-    }
+    //fuelSchedule4.StartCallback();
+    inj4StartFunction();
+    fuelSchedule4.Status = RUNNING; //Set the status to be in progress (ie The start callback has been called, but not the end callback)
+    FUEL4_COMPARE = (uint16_t)(FUEL4_COUNTER + uS_TO_TIMER_COMPARE(fuelSchedule4.duration)); //Doing this here prevents a potential overflow on restarts
   }
+  else if (fuelSchedule4.Status == RUNNING)
+  {
+    //fuelSchedule4.EndCallback();
+    inj4EndFunction();
+    fuelSchedule4.Status = OFF; //Turn off the schedule
+    fuelSchedule4.schedulesSet = 0;
+
+    //If there is a next schedule queued up, activate it
+    if (fuelSchedule4.hasNextSchedule == true)
+    {
+      FUEL4_COMPARE = (uint16_t)fuelSchedule4.nextStartCompare;
+      fuelSchedule4.endCompare = fuelSchedule4.nextEndCompare;
+      fuelSchedule4.Status = PENDING;
+      fuelSchedule4.schedulesSet = 1;
+      fuelSchedule4.hasNextSchedule = false;
+    }
+    else {
+      FUEL4_TIMER_DISABLE();
+    }
+  }*/
+}
 #endif
 
 #if (INJ_CHANNELS >= 5)
